@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Juristi – oikeudellinen neuvonta</title>
+<style>
+  :root {
+    --bg: #f5f3ee; --panel: #ffffff; --ink: #1d2433; --muted: #5d6677; --line: #dcd8cf;
+    --accent: #1f4e8c; --accent-ink: #ffffff; --accent-soft: #e6edf7; --danger: #a8322d;
+    --ok: #2f6b3a; --warn: #8a5a00; --code: #f0eee8;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15181e; --panel: #1d222b; --ink: #e6e8ec; --muted: #9aa3b2; --line: #313846;
+      --accent: #6b9bdc; --accent-ink: #0f1520; --accent-soft: #233149; --danger: #e0716b;
+      --ok: #7fbf8a; --warn: #e0b45a; --code: #262c37;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.5; }
+  header { padding: 14px 24px; border-bottom: 1px solid var(--line); background: var(--panel);
+    display: flex; align-items: baseline; gap: 14px; }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: .2px; }
+  header span { color: var(--muted); font-size: 14px; }
+  .layout { display: grid; grid-template-columns: 340px 1fr; min-height: calc(100vh - 56px); }
+  aside { border-right: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column;
+    max-height: calc(100vh - 56px); position: sticky; top: 0; }
+  .history-tools { padding: 16px; display: grid; gap: 8px; border-bottom: 1px solid var(--line); }
+  .history-tools h2 { margin: 0; font-size: 15px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  input[type=search], select, textarea { font: inherit; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; }
+  select { width: auto; }
+  input:focus, select:focus, textarea:focus, button:focus-visible, .dropzone:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px; }
+  #history { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+  #history li { padding: 12px 16px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  #history li:hover { background: var(--accent-soft); }
+  #history li.active { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+  .h-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .h-query { font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .h-files { font-size: 12px; color: var(--muted); }
+  .empty { padding: 16px; color: var(--muted); font-size: 14px; }
+  .badge { font-size: 11px; padding: 1px 7px; border-radius: 99px; border: 1px solid currentColor; }
+  .badge.running { color: var(--warn); } .badge.done { color: var(--ok); } .badge.error { color: var(--danger); }
+  main { padding: 24px; max-width: 980px; width: 100%; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+  label.title { display: block; font-weight: 600; margin-bottom: 6px; }
+  textarea { min-height: 150px; resize: vertical; background: var(--panel); }
+  .dropzone { margin-top: 16px; border: 2px dashed var(--line); border-radius: 12px; padding: 28px 16px;
+    text-align: center; color: var(--muted); transition: border-color .15s, background .15s; cursor: pointer; }
+  .dropzone.over { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+  .dropzone strong { color: var(--ink); }
+  .dropzone small { display: block; margin-top: 6px; font-size: 12px; }
+  .chips { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips li { background: var(--accent-soft); border-radius: 99px; padding: 4px 6px 4px 12px; font-size: 13px;
+    display: flex; align-items: center; gap: 6px; }
+  .chips a { color: inherit; }
+  .chips button { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; }
+  .actions { display: flex; gap: 10px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+  button.primary, button.secondary { font: inherit; border-radius: 8px; padding: 10px 18px; cursor: pointer; border: 1px solid var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  button.primary:disabled { opacity: .5; cursor: not-allowed; }
+  button.secondary { background: transparent; color: var(--accent); }
+  button.danger { border-color: var(--danger); color: var(--danger); }
+  .hint { color: var(--muted); font-size: 13px; }
+  .msg { color: var(--danger); font-size: 14px; }
+  .view-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .view-head h2 { margin: 0; font-size: 17px; }
+  .question { white-space: pre-wrap; margin: 10px 0 0; }
+  .progress { list-style: none; padding: 0; margin: 12px 0 0; font-size: 13px; color: var(--muted); max-height: 220px; overflow-y: auto; }
+  .progress li::before { content: "› "; }
+  .progress li:last-child { color: var(--ink); }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 1s linear infinite; vertical-align: -2px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .md { overflow-wrap: anywhere; }
+  .md h1, .md h2, .md h3, .md h4 { line-height: 1.3; margin: 1.2em 0 .5em; }
+  .md h1 { font-size: 1.35em; } .md h2 { font-size: 1.2em; } .md h3 { font-size: 1.07em; } .md h4 { font-size: 1em; }
+  .md > :first-child { margin-top: 0; }
+  .md a { color: var(--accent); }
+  .md code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: .92em; }
+  .md pre { background: var(--code); padding: 12px; border-radius: 8px; overflow-x: auto; }
+  .md pre code { background: none; padding: 0; }
+  .md blockquote { margin: 0; padding: 4px 14px; border-left: 3px solid var(--line); color: var(--muted); }
+  .md table { border-collapse: collapse; margin: 12px 0; display: block; overflow-x: auto; }
+  .md th, .md td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+  .md th { background: var(--accent-soft); }
+  .md hr { border: 0; border-top: 1px solid var(--line); margin: 20px 0; }
+  .error-box { color: var(--danger); white-space: pre-wrap; }
+  footer { color: var(--muted); font-size: 12px; padding: 0 24px 24px; }
+  [hidden] { display: none !important; }
+  @media (max-width: 800px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { position: static; max-height: 45vh; border-right: 0; border-bottom: 1px solid var(--line); }
+    main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Juristi</h1>
+  <span>Oikeudellinen neuvonta Suomen lainsäädännön ja oikeuskäytännön pohjalta</span>
+</header>
+
+<div class="layout">
+  <aside aria-label="Aiemmat kyselyt">
+    <div class="history-tools">
+      <h2>Aiemmat kyselyt</h2>
+      <input id="search" type="search" placeholder="Hae kysymyksistä, vastauksista ja tiedostoista…" aria-label="Hae kyselyistä">
+      <div class="row">
+        <label for="sort" class="hint">Järjestys</label>
+        <select id="sort">
+          <option value="desc">Uusin ensin</option>
+          <option value="asc">Vanhin ensin</option>
+        </select>
+        <span id="count" class="hint" style="margin-left:auto"></span>
+      </div>
+    </div>
+    <ul id="history"></ul>
+  </aside>
+
+  <main>
+    <section id="composer" class="card">
+      <label class="title" for="query">Kysymys</label>
+      <textarea id="query" placeholder="Kuvaa tilanne ja kirjoita kysymyksesi. Esim. ”Vuokranantaja irtisanoi sopimuksen sähköpostilla. Onko irtisanominen pätevä ja mikä on irtisanomisaika?”"></textarea>
+
+      <div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Lisää liitetiedostoja">
+        <strong>Pudota liitetiedostot tähän</strong> tai napsauta valitaksesi
+        <small>Tuetut: tekstitiedostot (.txt, .md, .csv), sähköpostit (.eml), PDF-tiedostot sekä kuvat (.png, .jpg) · enintään 25 Mt / tiedosto</small>
+      </div>
+      <input id="fileInput" type="file" multiple hidden accept=".txt,.md,.csv,.eml,.pdf,.png,.jpg,.jpeg">
+      <ul id="chips" class="chips"></ul>
+
+      <div class="actions">
+        <button id="submit" class="primary">Anna neuvo</button>
+        <span class="hint">Vastauksen laatiminen kestää yleensä muutamasta minuutista kymmeneen minuuttiin.</span>
+        <span id="formMsg" class="msg" role="alert"></span>
+      </div>
+    </section>
+
+    <section id="view" class="card" hidden aria-live="polite">
+      <div class="view-head">
+        <h2>Kysymys</h2>
+        <span id="vTime" class="hint"></span>
+      </div>
+      <p id="vQuery" class="question"></p>
+      <ul id="vFiles" class="chips"></ul>
+    </section>
+
+    <section id="result" class="card" hidden aria-live="polite">
+      <div class="view-head">
+        <h2>Neuvo</h2>
+        <span id="vStatus" class="hint"></span>
+      </div>
+      <ul id="vProgress" class="progress"></ul>
+      <div id="vAnswer" class="md" style="margin-top:12px"></div>
+      <div class="actions">
+        <button id="newBtn" class="secondary">Uusi kysely</button>
+        <button id="reuseBtn" class="secondary">Muokkaa ja kysy uudelleen</button>
+        <button id="copyBtn" class="secondary">Kopioi vastaus</button>
+        <button id="deleteBtn" class="secondary danger">Poista</button>
+      </div>
+    </section>
+  </main>
+</div>
+<footer>Vastaukset ovat tekoälyn tuottamia eivätkä korvaa asianajajan tai lakimiehen henkilökohtaista neuvontaa. Kyselyt ja liitteet tallennetaan vain tälle tietokoneelle.</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const SUPPORTED = ['.txt', '.md', '.csv', '.eml', '.pdf', '.png', '.jpg', '.jpeg'];
+const MAX_FILE = 25 * 1024 * 1024;
+const STATUS = { running: 'Käsitellään', done: 'Valmis', error: 'Virhe' };
+
+let pending = [];          // valitut tiedostot (File)
+let currentId = null;      // näkymässä oleva kysely
+let current = null;
+let pollTimer = null;
+
+// ---------- apurit ----------
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmtTime = (ts) => new Date(ts * 1000).toLocaleString('fi-FI', { dateStyle: 'short', timeStyle: 'short' });
+const fmtSize = (n) => n < 1024 ? `${n} t` : n < 1048576 ? `${(n / 1024).toFixed(0)} kt` : `${(n / 1048576).toFixed(1)} Mt`;
+const ext = (name) => (name.match(/\.[^.]+$/) || [''])[0].toLowerCase();
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.virhe || `Palvelinvirhe (${res.status})`);
+  return data;
+}
+
+// ---------- Markdown (kevyt, HTML escapataan ensin) ----------
+function inline(s) {
+  const codes = [];
+  s = s.replace(/`([^`]+)`/g, (m, c) => { codes.push(c); return `\u0000${codes.length - 1}\u0000`; });
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  s = s.replace(/(^|[\s(])(https?:\/\/[^\s<]+[^\s<.,;:)])/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/__([^_]+)__/g, '<strong>$1</strong>');
+  s = s.replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\w)/g, '$1<em>$2</em>');
+  return s.replace(/\u0000(\d+)\u0000/g, (m, i) => `<code>${codes[i]}</code>`);
+}
+const RE = {
+  fence: /^\s*```/, heading: /^(#{1,6})\s+(.*)$/, hr: /^\s*([-*_])(\s*\1){2,}\s*$/,
+  quote: /^&gt;\s?/, list: /^(\s*)([-*+]|\d+[.)])\s+(.*)$/,
+  tableSep: /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/,
+};
+const isTable = (lines, i) => lines[i].includes('|') && i + 1 < lines.length && RE.tableSep.test(lines[i + 1]);
+const isBlockStart = (lines, i) => { const l = lines[i];
+  return RE.fence.test(l) || RE.heading.test(l) || RE.hr.test(l) || RE.quote.test(l) || RE.list.test(l) || isTable(lines, i); };
+const cells = (l) => l.trim().replace(/^\||\|$/g, '').split('|').map((c) => inline(c.trim()));
+
+function renderList(items) {
+  let html = ''; const stack = [];
+  for (const it of items) {
+    while (stack.length && it.indent < stack[stack.length - 1].indent) html += `</li></${stack.pop().tag}>`;
+    const top = stack[stack.length - 1];
+    if (!top || it.indent > top.indent) {
+      const tag = it.ordered ? 'ol' : 'ul';
+      stack.push({ indent: it.indent, tag });
+      html += `<${tag}${it.ordered && it.start !== 1 ? ` start="${it.start}"` : ''}><li>${inline(it.text)}`;
+    } else html += `</li><li>${inline(it.text)}`;
+  }
+  while (stack.length) html += `</li></${stack.pop().tag}>`;
+  return html;
+}
+
+function blocks(lines) {
+  const out = []; let i = 0;
+  while (i < lines.length) {
+    const l = lines[i];
+    if (!l.trim()) { i++; continue; }
+    if (RE.fence.test(l)) {
+      const buf = []; i++;
+      while (i < lines.length && !RE.fence.test(lines[i])) buf.push(lines[i++]);
+      i++; out.push(`<pre><code>${buf.join('\n')}</code></pre>`); continue;
+    }
+    let m = l.match(RE.heading);
+    if (m) { out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); i++; continue; }
+    if (RE.hr.test(l)) { out.push('<hr>'); i++; continue; }
+    if (RE.quote.test(l)) {
+      const buf = [];
+      while (i < lines.length && RE.quote.test(lines[i])) buf.push(lines[i++].replace(RE.quote, ''));
+      out.push(`<blockquote>${blocks(buf)}</blockquote>`); continue;
+    }
+    if (isTable(lines, i)) {
+      let html = '<table><thead><tr>' + cells(l).map((c) => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+      i += 2;
+      while (i < lines.length && lines[i].includes('|') && lines[i].trim()) {
+        html += '<tr>' + cells(lines[i]).map((c) => `<td>${c}</td>`).join('') + '</tr>'; i++;
+      }
+      out.push(html + '</tbody></table>'); continue;
+    }
+    if (RE.list.test(l)) {
+      const items = [];
+      while (i < lines.length) {
+        const lm = lines[i].match(RE.list);
+        if (lm) {
+          items.push({ indent: lm[1].replace(/\t/g, '    ').length, ordered: /\d/.test(lm[2]), start: parseInt(lm[2], 10), text: lm[3] });
+          i++;
+        } else if (lines[i].trim() && /^\s+/.test(lines[i]) && items.length) {
+          items[items.length - 1].text += ' ' + lines[i].trim(); i++;
+        } else if (!lines[i].trim() && i + 1 < lines.length && RE.list.test(lines[i + 1])) {
+          i++;
+        } else break;
+      }
+      out.push(renderList(items)); continue;
+    }
+    const buf = [l]; i++;
+    while (i < lines.length && lines[i].trim() && !isBlockStart(lines, i)) buf.push(lines[i++]);
+    out.push(`<p>${buf.map((b) => inline(b.trim())).join(' ')}</p>`);
+  }
+  return out.join('\n');
+}
+const markdown = (src) => blocks(esc(src || '').replace(/\r\n?/g, '\n').split('\n'));
+
+// ---------- historia ----------
+let searchTimer = null;
+async function loadHistory() {
+  const q = $('search').value, sort = $('sort').value;
+  let items;
+  try { items = await api(`/api/queries?q=${encodeURIComponent(q)}&sort=${sort}`); }
+  catch (e) { $('history').innerHTML = `<li class="empty">${esc(e.message)}</li>`; return; }
+  $('count').textContent = items.length ? `${items.length} kpl` : '';
+  if (!items.length) {
+    $('history').innerHTML = `<li class="empty">${q ? 'Haulla ei löytynyt kyselyjä.' : 'Ei vielä kyselyjä.'}</li>`;
+    return;
+  }
+  $('history').innerHTML = items.map((it) => `
+    <li data-id="${esc(it.id)}" class="${it.id === currentId ? 'active' : ''}" tabindex="0">
+      <div class="h-meta"><span>${fmtTime(it.created_at)}</span><span class="badge ${it.status}">${STATUS[it.status]}</span></div>
+      <div class="h-query">${esc(it.query)}</div>
+      ${it.files.length ? `<div class="h-files">📎 ${esc(it.files.join(', '))}</div>` : ''}
+    </li>`).join('');
+}
+$('history').addEventListener('click', (e) => { const li = e.target.closest('li[data-id]'); if (li) openQuery(li.dataset.id); });
+$('history').addEventListener('keydown', (e) => { const li = e.target.closest('li[data-id]'); if (li && e.key === 'Enter') openQuery(li.dataset.id); });
+$('search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(loadHistory, 250); });
+$('sort').addEventListener('change', loadHistory);
+
+// ---------- tiedostot ----------
+function addFiles(list) {
+  const rejected = [];
+  for (const f of list) {
+    if (!SUPPORTED.includes(ext(f.name))) rejected.push(`${f.name} (tyyppiä ei tueta)`);
+    else if (f.size > MAX_FILE) rejected.push(`${f.name} (liian suuri)`);
+    else if (!pending.some((p) => p.name === f.name && p.size === f.size)) pending.push(f);
+  }
+  $('formMsg').textContent = rejected.length ? 'Ohitettiin: ' + rejected.join(', ') : '';
+  renderChips();
+}
+function renderChips() {
+  $('chips').innerHTML = pending.map((f, i) =>
+    `<li>${esc(f.name)} <span class="hint">${fmtSize(f.size)}</span><button data-i="${i}" aria-label="Poista ${esc(f.name)}">×</button></li>`).join('');
+}
+$('chips').addEventListener('click', (e) => { if (e.target.dataset.i !== undefined) { pending.splice(+e.target.dataset.i, 1); renderChips(); } });
+const drop = $('drop');
+drop.addEventListener('click', () => $('fileInput').click());
+drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('fileInput').click(); } });
+$('fileInput').addEventListener('change', (e) => { addFiles(e.target.files); e.target.value = ''; });
+['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', (e) => addFiles(e.dataTransfer.files));
+// Estetään selainta avaamasta tiedostoa, jos se pudotetaan alueen ohi.
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', (e) => e.preventDefault());
+
+const toBase64 = (file) => new Promise((resolve, reject) => {
+  const r = new FileReader();
+  r.onload = () => resolve(r.result.slice(r.result.indexOf(',') + 1));
+  r.onerror = () => reject(new Error(`Tiedoston ${file.name} lukeminen epäonnistui`));
+  r.readAsDataURL(file);
+});
+
+// ---------- lähetys ----------
+async function submit() {
+  const query = $('query').value.trim();
+  if (!query) { $('formMsg').textContent = 'Kirjoita ensin kysymys.'; $('query').focus(); return; }
+  $('submit').disabled = true; $('formMsg').textContent = '';
+  try {
+    const files = await Promise.all(pending.map(async (f) => ({ name: f.name, data: await toBase64(f) })));
+    const { id } = await api('/api/queries', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, files }),
+    });
+    $('query').value = ''; pending = []; renderChips();
+    await openQuery(id);
+    loadHistory();
+  } catch (e) {
+    $('formMsg').textContent = e.message;
+  } finally {
+    $('submit').disabled = false;
+  }
+}
+$('submit').addEventListener('click', submit);
+$('query').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit(); });
+
+// ---------- kyselyn näkymä ----------
+async function openQuery(id) {
+  clearTimeout(pollTimer);
+  currentId = id;
+  document.querySelectorAll('#history li').forEach((li) => li.classList.toggle('active', li.dataset.id === id));
+  let item;
+  try { item = await api(`/api/queries/${encodeURIComponent(id)}`); }
+  catch (e) { alert(e.message); return; }
+  if (id !== currentId) return;
+  current = item;
+  $('composer').hidden = true; $('view').hidden = false; $('result').hidden = false;
+  $('vTime').textContent = 'Kysytty ' + fmtTime(item.created_at);
+  $('vQuery').textContent = item.query;
+  $('vFiles').innerHTML = item.files.map((f) =>
+    `<li><a href="/api/queries/${encodeURIComponent(id)}/files/${encodeURIComponent(f.name)}" target="_blank">${esc(f.name)}</a> <span class="hint">${fmtSize(f.size)}</span></li>`).join('');
+
+  const running = item.status === 'running';
+  if (running) {
+    const secs = Math.round(Date.now() / 1000 - item.created_at);
+    $('vStatus').innerHTML = `<span class="spinner"></span>Laaditaan neuvoa… ${Math.floor(secs / 60)} min ${secs % 60} s`;
+  } else {
+    const dur = item.finished_at ? Math.round(item.finished_at - item.created_at) : null;
+    $('vStatus').textContent = `${STATUS[item.status]}${dur != null ? ` · kesto ${Math.floor(dur / 60)} min ${dur % 60} s` : ''}`;
+  }
+  $('vProgress').hidden = !running;
+  $('vProgress').innerHTML = item.progress.map((p) => `<li>${esc(p.text)}</li>`).join('');
+  $('vProgress').scrollTop = $('vProgress').scrollHeight;
+  if (item.status === 'done') $('vAnswer').innerHTML = markdown(item.answer);
+  else if (item.status === 'error') $('vAnswer').innerHTML = `<p class="error-box">${esc(item.error || 'Tuntematon virhe')}</p>`;
+  else $('vAnswer').innerHTML = '';
+  $('copyBtn').hidden = item.status !== 'done';
+  $('deleteBtn').hidden = running;
+
+  if (running) pollTimer = setTimeout(async () => {
+    await openQuery(id);
+    if (current && current.status !== 'running') loadHistory();
+  }, 2000);
+}
+
+function showComposer() {
+  clearTimeout(pollTimer);
+  currentId = null; current = null;
+  $('composer').hidden = false; $('view').hidden = true; $('result').hidden = true;
+  document.querySelectorAll('#history li.active').forEach((li) => li.classList.remove('active'));
+  $('query').focus();
+}
+$('newBtn').addEventListener('click', showComposer);
+$('reuseBtn').addEventListener('click', () => {
+  const q = current ? current.query : '';
+  const hadFiles = current && current.files.length > 0;
+  showComposer(); $('query').value = q;
+  $('formMsg').textContent = hadFiles ? 'Huom. liitteet on lisättävä uudelleen.' : '';
+});
+$('copyBtn').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(current.answer); $('copyBtn').textContent = 'Kopioitu ✓'; }
+  catch { $('copyBtn').textContent = 'Kopiointi epäonnistui'; }
+  setTimeout(() => { $('copyBtn').textContent = 'Kopioi vastaus'; }, 2000);
+});
+$('deleteBtn').addEventListener('click', async () => {
+  if (!current || !confirm('Poistetaanko kysely, vastaus ja liitteet pysyvästi?')) return;
+  try { await api(`/api/queries/${encodeURIComponent(current.id)}`, { method: 'DELETE' }); showComposer(); loadHistory(); }
+  catch (e) { alert(e.message); }
+});
+
+loadHistory();
+</script>
+</body>
+</html>
